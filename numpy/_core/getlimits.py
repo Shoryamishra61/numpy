@@ -330,14 +330,6 @@ class finfo:
         """
         return self.smallest_normal
 
-    def __eq__(self, other):
-        if not isinstance(other, finfo):
-            return NotImplemented
-        return self.dtype == other.dtype
-
-    def __hash__(self):
-        return hash(self.dtype)
-
 
 @set_module('numpy')
 class iinfo:

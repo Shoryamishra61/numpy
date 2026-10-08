@@ -121,6 +121,7 @@ class TestFinfo:
         assert f64.dtype.type is np.float64
         assert ld.dtype.type is np.longdouble
         assert f64 is not ld
+        assert f64 != ld
 
     def test_regression_gh32947_float64_first(self, isolated_finfo_cache):
         # gh-32947: When float64 was requested first, longdouble must not
@@ -132,18 +133,33 @@ class TestFinfo:
         assert f64.dtype.type is np.float64
         assert ld.dtype.type is np.longdouble
         assert f64 is not ld
+        assert f64 != ld
 
     def test_regression_gh32947_cache_identity(self, isolated_finfo_cache):
         # Repeated requests for the same scalar type must reuse cached object
         f64_1 = finfo(np.float64)
         f64_2 = finfo(np.float64)
         assert f64_1 is f64_2
+        assert hash(f64_1) == hash(f64_2)
 
         ld_1 = finfo(np.longdouble)
         ld_2 = finfo(np.longdouble)
         assert ld_1 is ld_2
+        assert hash(ld_1) == hash(ld_2)
 
+        # Distinct scalar types remain unequal and distinct
         assert f64_1 is not ld_1
+        assert f64_1 != ld_1
+
+        # Both can coexist as separate dictionary keys
+        d = {f64_1: "float64", ld_1: "longdouble"}
+        assert len(d) == 2
+        assert d[f64_1] == "float64"
+        assert d[ld_1] == "longdouble"
+
+        # Both can coexist as separate set elements
+        s = {f64_1, ld_1}
+        assert len(s) == 2
 
     def test_regression_gh32947_aliases(self, isolated_finfo_cache):
         # Scalar aliases and string names must map to the intended scalar entry
@@ -152,21 +168,42 @@ class TestFinfo:
         assert finfo(double) is f64
         assert finfo("float64") is f64
         assert finfo(np.dtype(np.float64)) is f64
+        assert hash(finfo(float)) == hash(f64)
+        assert hash(finfo(double)) == hash(f64)
+        assert hash(finfo("float64")) == hash(f64)
 
         ld = finfo(np.longdouble)
         assert finfo("longdouble") is ld
         assert finfo(np.dtype(np.longdouble)) is ld
+        assert hash(finfo("longdouble")) == hash(ld)
+
+        # Dictionary lookup works through equivalent aliases
+        d = {finfo("float64"): "f64_val", finfo("longdouble"): "ld_val"}
+        assert d[finfo(float)] == "f64_val"
+        assert d[finfo(double)] == "f64_val"
+        assert d[finfo(np.float64)] == "f64_val"
+        assert d[finfo(np.longdouble)] == "ld_val"
 
     def test_regression_gh32947_complex(self, isolated_finfo_cache):
         # Complex dtypes must map to their corresponding real component limits
         c128 = finfo(np.complex128)
         f64 = finfo(np.float64)
         assert c128 is f64
+        assert c128 == f64
+        assert hash(c128) == hash(f64)
 
         cld = finfo(np.clongdouble)
         ld = finfo(np.longdouble)
         assert cld is ld
+        assert cld == ld
+        assert hash(cld) == hash(ld)
         assert c128 is not cld
+        assert c128 != cld
+
+        # Alias keys can retrieve the same dictionary value
+        d = {f64: "real_val", ld: "ld_val"}
+        assert d[c128] == "real_val"
+        assert d[cld] == "ld_val"
 
     def test_regression_gh32947_downstream_clip_and_lstsq(self, isolated_finfo_cache):
         # Request longdouble first, then ensure float64 eps does not promote
